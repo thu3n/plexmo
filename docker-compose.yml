@@ -1,0 +1,14 @@
+
+version: '3'
+services:
+  plexmo:
+    image: ghcr.io/thu3n/plexmo:latest
+    container_name: plexmo
+    environment:
+      - TZ=Europe/Stockholm
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./config:/app/config
+    restart: unless-stopped
