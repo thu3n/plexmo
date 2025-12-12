@@ -1,4 +1,4 @@
-# Plexmo
+# Plexmo - Multi-Server plex monitor
 
 [https://github.com/thu3n/plexmo](https://github.com/thu3n/plexmo)
 
