@@ -68,9 +68,7 @@ export default function Home() {
     }
   }, [serversLoading, serversData]);
 
-  const dashboardKey = selectedServerId
-    ? `/api/dashboard?serverId=${selectedServerId}`
-    : "/api/dashboard";
+  const dashboardKey = "/api/dashboard";
 
   const {
     data,
@@ -82,18 +80,51 @@ export default function Home() {
     revalidateOnFocus: false,
   });
 
-  const summary: SessionSummary = data?.summary ?? {
-    active: 0,
-    directPlay: 0,
-    transcoding: 0,
-    paused: 0,
-    bandwidth: 0,
-  };
-
-  const sessions = data?.sessions ?? [];
+  const allSessions = data?.sessions ?? [];
   const appName = data?.appName;
-
   const libraries = data?.libraries ?? [];
+
+  // Filter sessions based on selection
+  const filteredSessions = useMemo(() => {
+    if (!selectedServerId) return allSessions;
+    return allSessions.filter(s => s.serverId === selectedServerId);
+  }, [allSessions, selectedServerId]);
+
+  // Recalculate summary based on filtered sessions
+  const summary = useMemo(() => {
+    if (!data) return {
+      active: 0,
+      directPlay: 0,
+      transcoding: 0,
+      paused: 0,
+      bandwidth: 0,
+    };
+
+    // If no filter, use server provided summary
+    if (!selectedServerId) return data.summary;
+
+    // Recalculate for filtered view
+    return filteredSessions.reduce((acc, session) => {
+      acc.active++;
+      acc.bandwidth += session.bandwidth || 0;
+
+      const isTranscode = session.decision?.toLowerCase() === "transcode";
+      const isPaused = session.state?.toLowerCase() === "paused";
+
+      if (isPaused) acc.paused++;
+      else if (isTranscode) acc.transcoding++;
+      else acc.directPlay++;
+
+      return acc;
+    }, {
+      active: 0,
+      directPlay: 0,
+      transcoding: 0,
+      paused: 0,
+      bandwidth: 0,
+      serverName: serversData?.servers.find(s => s.id === selectedServerId)?.name
+    } as SessionSummary);
+  }, [data, filteredSessions, selectedServerId, serversData]);
 
   const activeServerName =
     selectedServerId
@@ -130,7 +161,7 @@ export default function Home() {
             }}
             className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide transition-all ${isSelected
               ? "text-white ring-2 ring-white/20 shadow-md transform scale-105"
-              : "text-white/70 hover:text-white hover:scale-105"
+              : "text-white/70 hover:text-white hover:scale-105 opacity-60 hover:opacity-100" // Modified to show others but dimmed
               }`}
             style={{
               backgroundColor: isSelected ? color : `${color}20`,
@@ -148,8 +179,11 @@ export default function Home() {
     </div>
   );
 
+  // Stats need to be calculated from ALL sessions to keep tags visible
+  const statsSource = allSessions;
+
   // 1. Streams per Server
-  const streamsPerServer = sessions.reduce((acc, session) => {
+  const streamsPerServer = statsSource.reduce((acc, session) => {
     const id = session.serverId || "unknown";
     const name = session.serverName || "Unknown";
     if (!acc[id]) acc[id] = { name, count: 0 };
@@ -158,7 +192,7 @@ export default function Home() {
   }, {} as Record<string, { name: string; count: number }>);
 
   // 2. Direct Play per Server
-  const directPlayPerServer = sessions.reduce((acc, session) => {
+  const directPlayPerServer = statsSource.reduce((acc, session) => {
     // If it's not explicitly transcoding, treat as direct play for this breakdown
     const isTranscode = session.decision?.toLowerCase() === "transcode";
     if (!isTranscode) {
@@ -171,7 +205,7 @@ export default function Home() {
   }, {} as Record<string, { name: string; count: number }>);
 
   // 3. Transcode per Server
-  const transcodePerServer = sessions.reduce((acc, session) => {
+  const transcodePerServer = statsSource.reduce((acc, session) => {
     const isTranscode = session.decision?.toLowerCase() === "transcode";
     if (isTranscode) {
       const id = session.serverId || "unknown";
@@ -183,7 +217,7 @@ export default function Home() {
   }, {} as Record<string, { name: string; count: number }>);
 
   // 4. Bandwidth per Server
-  const bandwidthPerServer = sessions.reduce((acc, session) => {
+  const bandwidthPerServer = statsSource.reduce((acc, session) => {
     const id = session.serverId || "unknown";
     const name = session.serverName || "Unknown";
     const bandwidth = session.bandwidth || 0;
@@ -349,7 +383,7 @@ export default function Home() {
               </div>
             ) : null}
 
-            {!isLoading && sessions.length === 0 && !error ? (
+            {!isLoading && filteredSessions.length === 0 && !error ? (
               <div className="col-span-full flex min-h-[300px] flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/5 p-10 text-center">
                 <div className="rounded-full bg-white/5 p-6 mb-4">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-10 h-10 text-white/40">
@@ -362,7 +396,7 @@ export default function Home() {
             ) : null}
 
             {/* Render actual sessions or debug layout */}
-            {sessions.map((session) => {
+            {filteredSessions.map((session) => {
               const serverObj = serversData?.servers.find(s => s.id === session.serverId);
               const color = getServerColor(session.serverId, serverObj?.color);
               return <SessionCard key={session.id} session={session} serverColor={color} />;

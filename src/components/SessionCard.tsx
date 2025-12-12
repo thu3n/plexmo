@@ -64,9 +64,9 @@ const getPlayerIcon = (player: string | undefined, platform: string | undefined)
     // LG
     if (p.includes("lg") || p.includes("webos")) {
         return (
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-pink-500">
-                <title>LG TV</title>
-                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm1 3v7h2.5v2H11V5h2zm-4.5 9a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" />
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-[#A50034]">
+                <title>LG</title>
+                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm.049 5.465v8.59h5.182v-2.5h-2.636v-.045h5.272v5.272h-.863c-1.396 1.35-3.269 1.95-5.91 1.636-2.909-.345-4.818-2.509-5.182-5.636-.29-2.5.819-4.818 2.91-6.045 1.454-.864 3.636-.864 4.863.09l-1.545 2.09c-.59-.408-1.545-.454-2.181-.09-.91.5-1.318 1.636-1.045 2.545.272.91 1.181 1.41 2.227 1.09.454-.136.818-.5.91-1.09h-2.41v-2.09h.181zm-4.318 2.09c.682 0 1.227.545 1.227 1.227 0 .682-.545 1.227-1.227 1.227-.682 0-1.227-.545-1.227-1.227 0-.682.545-1.227 1.227-1.227z" />
             </svg>
         );
     }
@@ -151,7 +151,10 @@ export const SessionCard = ({ session, serverColor }: { session: PlexSession; se
                         {/* Player */}
                         <div className="grid grid-cols-[65px_1fr] gap-2 items-baseline">
                             <span className="text-white/30 font-bold uppercase tracking-wider text-right text-[10px]">{t("session.player")}</span>
-                            <div className="truncate text-white/90">{session.player}</div>
+                            <div className="flex items-center gap-1.5 truncate text-white/90">
+                                {playerIcon}
+                                <span className="truncate">{session.player}</span>
+                            </div>
                         </div>
                         {/* Quality */}
                         <div className="grid grid-cols-[65px_1fr] gap-2 items-baseline">
@@ -181,7 +184,7 @@ export const SessionCard = ({ session, serverColor }: { session: PlexSession; se
                             <span className="text-white/30 font-bold uppercase tracking-wider text-right text-[10px]">{t("session.location")}</span>
                             <div className="truncate text-white/90">
                                 {session.location === "wan" ? (
-                                    <span className="flex items-center gap-1">{t("session.wan")}</span>
+                                    <span className="flex items-center gap-1">{session.ip || t("session.wan")}</span>
                                 ) : (
                                     <span>{t("session.lan")}</span>
                                 )}

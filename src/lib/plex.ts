@@ -18,7 +18,7 @@ type RawVideo = {
   Media?: RawMedia | RawMedia[];
   TranscodeSession?: { videoDecision?: string };
   Session?: { bandwidth?: string | number; location?: string };
-  Player?: { platform?: string; product?: string; title?: string; state?: string };
+  Player?: { platform?: string; product?: string; title?: string; state?: string; address?: string; remotePublicAddress?: string };
   User?: { title?: string };
   ratingKey?: string;
   key?: string;
@@ -92,6 +92,7 @@ export type PlexSession = {
   year?: string;
   player?: string;
   container?: string;
+  ip?: string;
 };
 
 export type LibrarySection = {
@@ -313,6 +314,7 @@ export const fetchSessions = async (
       year: video.year as string | undefined,
       player: player.product || player.platform || player.title || "Unknown Player",
       container: (media.container as string) || (video.container as string) || undefined,
+      ip: player.remotePublicAddress || player.address || undefined,
     };
   });
 
