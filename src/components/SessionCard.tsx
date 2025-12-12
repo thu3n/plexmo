@@ -21,61 +21,142 @@ const formatTime = (ms: number) => {
     return `${minutes}:${pad(seconds)}`;
 };
 
-const getPlayerIcon = (player: string | undefined, platform: string | undefined) => {
+const getStreamColor = (isDirect: boolean) => {
+    return isDirect ? "text-emerald-400" : "text-amber-400";
+};
+
+const formatAudioChannels = (channels?: string | number) => {
+    if (!channels) return "";
+    const c = String(channels);
+    if (c === "2") return "Stereo";
+    if (c === "6") return "5.1";
+    if (c === "8") return "7.1";
+    return c;
+};
+
+const formatVideoRes = (height?: string | number) => {
+    if (!height) return "";
+    // If it already has 'p' or 'i', just return it
+    if (String(height).toLowerCase().match(/[pi]$/)) return String(height);
+    return `${height}p`;
+};
+
+const getPlayerIcon = (player: string | undefined, platform: string | undefined, className: string = "w-5 h-5") => {
     const p = (player || platform || "").toLowerCase();
 
-    // Android
-    if (p.includes("android")) {
-        return (
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-emerald-400">
-                <title>Android</title>
-                <path d="M17.523 15.3414C17.523 16.7113 16.4069 17.8284 15.0289 17.8284C13.6508 17.8284 12.5368 16.7113 12.5368 15.3414C12.5368 13.9715 13.6508 12.8564 15.0289 12.8564C16.4069 12.8564 17.523 13.9715 17.523 15.3414ZM7.4457 15.3414C7.4457 16.7113 6.3317 17.8284 4.9537 17.8284C3.5756 17.8284 2.4595 16.7113 2.4595 15.3414C2.4595 13.9715 3.5756 12.8564 4.9537 12.8564C6.3317 12.8564 7.4457 13.9715 7.4457 15.3414ZM18.784 10.9926V19.4632C18.784 20.3705 18.043 21.1136 17.135 21.1136H2.8481C1.9401 21.1136 1.1991 20.3705 1.1991 19.4632V10.9926H18.784ZM15.5309 2.9234L17.595 5.5606C17.755 5.7656 17.7129 6.0596 17.508 6.2205C17.3021 6.3805 17.008 6.3385 16.848 6.1326L14.7339 3.4316C13.2049 2.7215 11.5169 2.6565 9.9488 3.2505L7.7468 6.1605C7.5798 6.3595 7.2849 6.3906 7.0858 6.2235C6.8869 6.0566 6.8558 5.7616 7.0228 5.5615L9.3099 2.5395C8.0169 2.2225 6.6669 2.2855 5.4188 2.7665C2.9279 3.7255 1.1901 6.0956 1.1901 8.8785H18.793C18.793 6.0276 16.994 3.6166 14.4239 2.6936C14.7949 2.7536 15.1639 2.8295 15.5309 2.9234Z" />
-            </svg>
-        );
+    const platformMap: Record<string, string> = {
+        "android": "android",
+        "ios": "ios",
+        "apple": "ios",
+        "iphone": "ios",
+        "ipad": "ios",
+        "tvos": "atv",
+        "chrome": "chrome",
+        "firefox": "firefox",
+        "edge": "msedge",
+        "safari": "safari",
+        "lg": "lg",
+        "webos": "lg",
+        "samsung": "samsung",
+        "tizen": "samsung",
+        "roku": "roku",
+        "playstation": "playstation",
+        "ps4": "playstation",
+        "ps5": "playstation",
+        "xbox": "xbox",
+        "wiiu": "wiiu",
+        "kodi": "kodi",
+        "plexamp": "plexamp",
+        "linux": "linux",
+        "macos": "macos",
+        "osx": "macos",
+        "windows": "windows",
+        "opera": "opera",
+        "ie": "ie",
+        "dlna": "dlna",
+        "chromecast": "chromecast",
+        "alexa": "alexa",
+        "tivo": "tivo"
+    };
+
+    const platformColors: Record<string, string> = {
+        "alexa": "#00caff",
+        "android": "#3ddc84",
+        "atv": "#a2aaad",
+        "chrome": "#db4437",
+        "chromecast": "#4285f4",
+        "default": "#e5a00d",
+        "dlna": "#4ba32f",
+        "firefox": "#ff7139",
+        "gtv": "#008bcf",
+        "ie": "#18bcef",
+        "ios": "#a2aaad",
+        "kodi": "#30aada",
+        "lg": "#990033",
+        "linux": "#0099cc",
+        "macos": "#a2aaad",
+        "msedge": "#0078d7",
+        "opera": "#fa1e4e",
+        "playstation": "#003087",
+        "plex": "#e5a00d",
+        "plexamp": "#e5a00d",
+        "roku": "#673293",
+        "safari": "#00d3f9",
+        "samsung": "#034ea2",
+        "synclounge": "#151924",
+        "tivo": "#00a7e1",
+        "wiiu": "#03a9f4",
+        "windows": "#0078d7",
+        "wp": "#68217a",
+        "xbmc": "#3b4872",
+        "xbox": "#107c10"
+    };
+
+    let icon = "plex"; // Default icon
+    let color = "#e5a00d"; // Default color (plex/default)
+
+    // Check specific mappings first
+    for (const [key, value] of Object.entries(platformMap)) {
+        if (p.includes(key)) {
+            icon = value;
+            if (platformColors[icon]) {
+                color = platformColors[icon];
+            }
+            break;
+        }
     }
-    // Apple / iOS / Safari
-    if (p.includes("ios") || p.includes("apple") || p.includes("iphone") || p.includes("ipad") || p.includes("safari") || p.includes("tvos")) {
-        return (
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-white">
-                <title>Apple</title>
-                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.21-1.96 1.07-3.11-1.05.05-2.31.71-3.06 1.58-.69.8-1.26 2.05-1.1 3.14 1.17.08 2.37-.78 3.09-1.61" />
-            </svg>
-        );
-    }
-    // Chrome
-    if (p.includes("chrome")) {
-        return (
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-blue-400">
-                <title>Chrome</title>
-                <path d="M12 0C5.372 0 0 5.373 0 12s5.372 12 12 12 12-5.373 12-12S18.628 0 12 0zm0 22C6.486 22 2 17.514 2 12S6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z" />
-                <circle cx="12" cy="12" r="4" fill="currentColor" className="text-white" />
-            </svg>
-        );
-    }
-    // Firefox
-    if (p.includes("firefox")) {
-        return (
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-orange-500">
-                <title>Firefox</title>
-                <path d="M21.196 15.328c-.808 3.5-3.665 6.27-7.447 7.087-5.91 1.277-11.233-2.613-11.758-8.216-.402-4.295 1.77-8.272 5.09-10.45l.93 1.43c-2.427 1.637-4.008 4.545-3.75 7.643.344 4.148 4.14 7.027 8.356 6.262 2.618-.475 4.706-2.32 5.566-4.705.53-1.465.558-3.023.1-4.47-.563-1.78-1.85-3.23-3.483-4.12l1.018-1.722c2.2.982 3.935 3.033 4.67 5.438.563 1.838.528 3.824-.292 5.823z" />
-            </svg>
-        );
-    }
-    // LG
-    if (p.includes("lg") || p.includes("webos")) {
-        return (
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-[#A50034]">
-                <title>LG</title>
-                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm.049 5.465v8.59h5.182v-2.5h-2.636v-.045h5.272v5.272h-.863c-1.396 1.35-3.269 1.95-5.91 1.636-2.909-.345-4.818-2.509-5.182-5.636-.29-2.5.819-4.818 2.91-6.045 1.454-.864 3.636-.864 4.863.09l-1.545 2.09c-.59-.408-1.545-.454-2.181-.09-.91.5-1.318 1.636-1.045 2.545.272.91 1.181 1.41 2.227 1.09.454-.136.818-.5.91-1.09h-2.41v-2.09h.181zm-4.318 2.09c.682 0 1.227.545 1.227 1.227 0 .682-.545 1.227-1.227 1.227-.682 0-1.227-.545-1.227-1.227 0-.682.545-1.227 1.227-1.227z" />
-            </svg>
-        );
-    }
-    // Plex
+
     return (
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-amber-500">
-            <title>Plex</title>
-            <path d="M11.643 0H4.357L0 12l4.357 12h7.286L16 12 11.643 0zM24 12l-4.357-12h-7.286L16.714 12l-4.357 12h7.286L24 12z" />
-        </svg>
+        <div
+            className={`flex items-center justify-center rounded-sm shadow-sm ${className}`}
+            style={{ backgroundColor: color, minWidth: '20px', minHeight: '20px' }}
+            title={player || platform}
+        >
+            <img
+                src={`/images/platforms/${icon}.svg`}
+                alt={player || "Player"}
+                className="w-[70%] h-[70%] object-contain"
+                onError={(e) => {
+                    e.currentTarget.src = "/images/platforms/plex.svg";
+                }}
+            />
+        </div>
+    );
+};
+
+const HoverReveal = ({ current, original, isDirect }: { current: React.ReactNode, original: React.ReactNode, isDirect: boolean }) => {
+    if (isDirect) {
+        return <span className="text-emerald-400">{original}</span>;
+    }
+    return (
+        <div className="group/reveal relative inline-block cursor-help align-top max-w-full truncate">
+            <span className="block group-hover/reveal:hidden text-amber-400 truncate">
+                {current}
+            </span>
+            <span className="hidden group-hover/reveal:block text-emerald-400 truncate">
+                {original}
+            </span>
+        </div>
     );
 };
 
@@ -142,7 +223,14 @@ export const SessionCard = ({ session, serverColor }: { session: PlexSession; se
 
                 {/* Details Panel (Right) - Glassy & Tight */}
                 <div className="relative flex-1 p-3 text-[11px] sm:text-xs font-medium leading-tight text-white/70">
-                    <div className="flex flex-col gap-1.5">
+
+                    {/* Platform Icon - Top Right */}
+                    <div className="absolute top-3 right-3">
+                        {/* Override icon size for corner display */}
+                        {session.player && getPlayerIcon(session.player, session.platform, "w-[60px] h-[60px] shadow-lg")}
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 pt-1">
                         {/* Server */}
                         <div className="grid grid-cols-[65px_1fr] gap-2 items-baseline">
                             <span className="text-white/30 font-bold uppercase tracking-wider text-right text-[10px]">{t("session.server")}</span>
@@ -151,17 +239,26 @@ export const SessionCard = ({ session, serverColor }: { session: PlexSession; se
                         {/* Player */}
                         <div className="grid grid-cols-[65px_1fr] gap-2 items-baseline">
                             <span className="text-white/30 font-bold uppercase tracking-wider text-right text-[10px]">{t("session.player")}</span>
-                            <div className="flex items-center gap-1.5 truncate text-white/90">
-                                {playerIcon}
-                                <span className="truncate">{session.player}</span>
-                            </div>
+                            <div className="truncate text-white/90">{session.player}</div>
                         </div>
                         {/* Quality */}
                         <div className="grid grid-cols-[65px_1fr] gap-2 items-baseline">
                             <span className="text-white/30 font-bold uppercase tracking-wider text-right text-[10px]">{t("session.quality")}</span>
                             <div className="truncate">
-                                <span className="text-white/90">{session.resolution || "Original"}</span>
-                                {bitrate && <span className="text-white/40 ml-1">({bitrate})</span>}
+                                <HoverReveal
+                                    isDirect={session.isOriginalQuality}
+                                    current={
+                                        <span>
+                                            {session.resolution} (Convert)
+                                            <span className="opacity-70"> • {bitrate || "Unknown"}</span>
+                                        </span>
+                                    }
+                                    original={
+                                        <span>
+                                            Original <span className="opacity-70">({session.resolution})</span>
+                                        </span>
+                                    }
+                                />
                             </div>
                         </div>
 
@@ -170,15 +267,80 @@ export const SessionCard = ({ session, serverColor }: { session: PlexSession; se
                         {/* Stream */}
                         <div className="grid grid-cols-[65px_1fr] gap-2 items-baseline">
                             <span className="text-white/30 font-bold uppercase tracking-wider text-right text-[10px]">{t("session.stream")}</span>
-                            <span className={isTranscoding ? "text-amber-400" : "text-emerald-400"}>
-                                {isTranscoding ? t("session.transcode") : t("session.directPlay")}
-                            </span>
+                            <HoverReveal
+                                isDirect={!isTranscoding && session.decision !== "direct stream"}
+                                current={
+                                    session.decision === "direct stream"
+                                        ? "Direct Stream"
+                                        : `${t("session.transcode")} (Throttled)`
+                                }
+                                original={t("session.directPlay")}
+                            />
                         </div>
                         {/* Container */}
                         <div className="grid grid-cols-[65px_1fr] gap-2 items-baseline">
                             <span className="text-white/30 font-bold uppercase tracking-wider text-right text-[10px]">{t("session.container")}</span>
-                            <span className="truncate text-white/90 uppercase">{session.container || "MKV"}</span>
+                            <HoverReveal
+                                isDirect={!session.transcodeContainer}
+                                current={
+                                    <span>
+                                        Transcode <span className="text-white/50 ml-1">({(session.originalContainer || "").toUpperCase()} &rarr; {(session.transcodeContainer || "").toUpperCase()})</span>
+                                    </span>
+                                }
+                                original={(session.originalContainer || "MKV").toUpperCase()}
+                            />
                         </div>
+                        {/* Video */}
+                        <div className="grid grid-cols-[65px_1fr] gap-2 items-baseline">
+                            <span className="text-white/30 font-bold uppercase tracking-wider text-right text-[10px]">VIDEO</span>
+                            <HoverReveal
+                                isDirect={session.videoDecision === "direct play" || session.videoDecision === "direct stream"}
+                                current={
+                                    <span>
+                                        Transcode <span className="text-white/50 ml-1">
+                                            ({(session.transcodeVideoCodec || "").toUpperCase()} {formatVideoRes(session.transcodeHeight)})
+                                        </span>
+                                    </span>
+                                }
+                                original={
+                                    <span>
+                                        {session.videoDecision === "direct stream" ? "Direct Stream" : "Direct Play"} <span className="text-white/50 ml-1">
+                                            ({(session.originalVideoCodec || "").toUpperCase()} {formatVideoRes(session.originalHeight || session.resolution)})
+                                        </span>
+                                    </span>
+                                }
+                            />
+                        </div>
+                        {/* Audio */}
+                        <div className="grid grid-cols-[65px_1fr] gap-2 items-baseline">
+                            <span className="text-white/30 font-bold uppercase tracking-wider text-right text-[10px]">AUDIO</span>
+                            <HoverReveal
+                                isDirect={session.audioDecision === "direct play" || session.audioDecision === "direct stream"}
+                                current={
+                                    <span>
+                                        Transcode <span className="text-white/50 ml-1">
+                                            ({(session.transcodeAudioCodec || "").toUpperCase()} {formatAudioChannels(session.transcodeAudioChannels)})
+                                        </span>
+                                    </span>
+                                }
+                                original={
+                                    <span>
+                                        {session.audioDecision === "direct stream" ? "Direct Stream" : "Direct Play"} <span className="text-white/50 ml-1">
+                                            ({(session.originalAudioCodec || "").toUpperCase()} {formatAudioChannels(session.originalAudioChannels)})
+                                        </span>
+                                    </span>
+                                }
+                            />
+                        </div>
+                        {/* Subtitle */}
+                        <div className="grid grid-cols-[65px_1fr] gap-2 items-baseline">
+                            <span className="text-white/30 font-bold uppercase tracking-wider text-right text-[10px]">SUBTITLE</span>
+                            <div className={getStreamColor(session.subtitleDecision !== "transcode" && session.subtitleDecision !== "burn")}>
+                                {session.subtitleDecision === "transcode" || session.subtitleDecision === "burn" ? "Burn-in" : "Direct Stream"}
+                                <span className="text-white/50 ml-1">(SRT)</span>
+                            </div>
+                        </div>
+
                         {/* Location */}
                         <div className="grid grid-cols-[65px_1fr] gap-2 items-baseline">
                             <span className="text-white/30 font-bold uppercase tracking-wider text-right text-[10px]">{t("session.location")}</span>
@@ -186,7 +348,7 @@ export const SessionCard = ({ session, serverColor }: { session: PlexSession; se
                                 {session.location === "wan" ? (
                                     <span className="flex items-center gap-1">{session.ip || t("session.wan")}</span>
                                 ) : (
-                                    <span>{t("session.lan")}</span>
+                                    <span>{t("session.lan")}: {session.ip}</span>
                                 )}
                             </div>
                         </div>

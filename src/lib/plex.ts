@@ -16,7 +16,17 @@ type RawMedia = {
 
 type RawVideo = {
   Media?: RawMedia | RawMedia[];
-  TranscodeSession?: { videoDecision?: string };
+  TranscodeSession?: {
+    videoDecision?: string;
+    audioDecision?: string;
+    subtitleDecision?: string;
+    container?: string;
+    videoCodec?: string;
+    audioCodec?: string;
+    height?: string | number;
+    audioChannels?: string | number;
+    [key: string]: unknown;
+  };
   Session?: { bandwidth?: string | number; location?: string };
   Player?: { platform?: string; product?: string; title?: string; state?: string; address?: string; remotePublicAddress?: string };
   User?: { title?: string };
@@ -93,6 +103,20 @@ export type PlexSession = {
   player?: string;
   container?: string;
   ip?: string;
+  videoDecision?: string;
+  audioDecision?: string;
+  subtitleDecision?: string;
+  isOriginalQuality: boolean;
+  originalContainer?: string;
+  transcodeContainer?: string;
+  originalVideoCodec?: string;
+  transcodeVideoCodec?: string;
+  originalAudioCodec?: string;
+  transcodeAudioCodec?: string;
+  originalAudioChannels?: string;
+  transcodeAudioChannels?: string;
+  originalHeight?: string;
+  transcodeHeight?: string;
 };
 
 export type LibrarySection = {
@@ -238,10 +262,20 @@ export const fetchSessions = async (
     const session = video.Session ?? {};
     const player = video.Player ?? {};
 
+    const normalizeDecision = (d: string | undefined) => {
+      if (!d) return "direct play";
+      const lower = d.toLowerCase();
+      return lower === "copy" ? "direct stream" : lower;
+    };
+
+    const videoDecision = normalizeDecision(transcode.videoDecision);
+    const audioDecision = normalizeDecision(transcode.audioDecision);
+    const subtitleDecision = normalizeDecision(transcode.subtitleDecision);
+
     const decision =
-      (transcode.videoDecision as string | undefined) ||
-      (part.decision as string | undefined) ||
-      undefined;
+      videoDecision !== "direct play" ? videoDecision :
+        (part.decision as string | undefined) ||
+        undefined;
 
     const normalizedDecision = decision?.toLowerCase() ?? "unknown";
     if (normalizedDecision.includes("transcode")) {
@@ -315,6 +349,20 @@ export const fetchSessions = async (
       player: player.product || player.platform || player.title || "Unknown Player",
       container: (media.container as string) || (video.container as string) || undefined,
       ip: player.remotePublicAddress || player.address || undefined,
+      videoDecision,
+      audioDecision,
+      subtitleDecision,
+      isOriginalQuality: videoDecision === "direct play" || videoDecision === "direct stream",
+      originalContainer: (media.container as string) || (video.container as string) || undefined,
+      transcodeContainer: (transcode.container as string) || undefined,
+      originalVideoCodec: (media.videoCodec as string) || undefined,
+      transcodeVideoCodec: (transcode.videoCodec as string) || undefined,
+      originalAudioCodec: (media.audioCodec as string) || undefined,
+      transcodeAudioCodec: (transcode.audioCodec as string) || undefined,
+      originalAudioChannels: (media.audioChannels as string) || undefined,
+      transcodeAudioChannels: (transcode.audioChannels as string) || undefined,
+      originalHeight: (media.height as string) || undefined,
+      transcodeHeight: (transcode.height as string) || undefined,
     };
   });
 
