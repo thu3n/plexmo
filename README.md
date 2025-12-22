@@ -91,9 +91,6 @@ They easiest way to get Plexmo up and running is with Docker.
           - "3000:3000"
         volumes:
           - ./config:/app/config
-          # [REQUIRED for Import] Mount your Tautulli folder so the container can see it.
-          # Format: /path/on/host:/path/in/container:ro
-          # - /path/to/tautulli:/mnt/tautulli:ro
         restart: unless-stopped
     ```
 
@@ -148,8 +145,6 @@ If you prefer to run it bare-metal or for development:
 | :--- | :--- | :--- |
 | `PORT` | Port the application runs on | `3000` |
 | `TZ` | Timezone for correct log timestamps | `UTC` |
-| `DATABASE_URL` | Path to SQLite DB (Internal) | `file:../config/dev.db` |
-| `TAUTULLI_PATH` | Default start folder for file browser | *(Optional)* |
 
 ### Volume Mounts (Docker)
 
