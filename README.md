@@ -60,7 +60,7 @@ Built with performance and aesthetics in mind, it leverages the latest web techn
 <img src="public/screenshots/setup-configure.png" alt="Configuration" width="48%">
 </div>
 
-### Other
+### Powerful Settings
 <div style="display: flex; gap: 10px;">
 <img src="public/screenshots/settings-server.png" alt="Server Settings" width="48%">
 <img src="public/screenshots/settings-access.png" alt="Access Control" width="48%">
@@ -85,8 +85,6 @@ They easiest way to get Plexmo up and running is with Docker.
         environment:
           - TZ=Europe/Stockholm
           - PORT=3000
-          # [OPTIONAL] Sets the default start folder for the file browser
-          # - TAUTULLI_PATH=/mnt/tautulli
         ports:
           - "3000:3000"
         volumes:
@@ -151,7 +149,6 @@ If you prefer to run it bare-metal or for development:
 | Volume | Description |
 | :--- | :--- |
 | `/app/config` | Stores the SQLite database and configuration files. **Persist this to save data.** |
-| `/mnt/tautulli` | (Optional) Mount your Tautulli folder here to import history. |
 
 ---
 
@@ -194,5 +191,5 @@ Distributed under the MIT License. See `LICENSE` for more information.
 ---
 
 <div align="center">
-  <small>Built with ❤️ by <a href="https://github.com/thu3n">Elias Thuen</a></small>
+  <small>Built with ❤️ by <a href="https://github.com/thu3n">Thu3n</a></small>
 </div>
