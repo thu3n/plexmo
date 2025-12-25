@@ -60,7 +60,7 @@ Built with performance and aesthetics in mind, it leverages the latest web techn
 <img src="public/screenshots/setup-configure.png" alt="Configuration" width="48%">
 </div>
 
-### Powerful Settings
+### Other
 <div style="display: flex; gap: 10px;">
 <img src="public/screenshots/settings-server.png" alt="Server Settings" width="48%">
 <img src="public/screenshots/settings-access.png" alt="Access Control" width="48%">
