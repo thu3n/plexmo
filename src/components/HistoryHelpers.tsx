@@ -1,6 +1,6 @@
 
-import { HistoryEntry } from "@/lib/history";
-import { PlexSession } from "@/lib/plex";
+import type { HistoryEntry } from "@/lib/history";
+import type { PlexSession } from "@/lib/plex";
 import React from "react";
 
 // Helpers duplicated/moved from HistoryList for consistency

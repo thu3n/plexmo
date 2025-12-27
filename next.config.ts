@@ -50,6 +50,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '1024mb',
     },
   },
+  serverExternalPackages: ["better-sqlite3"],
   // In Next.js 15+, instrumentationHook is often stable or enabled by default if file exists.
   // Attempts to set it explicitly if types allow, otherwise reliant on auto-detection.
   // @ts-ignore
@@ -57,7 +58,7 @@ const nextConfig: NextConfig = {
   env: {
     // Inject the resolved secret into the build/runtime environment
     JWT_SECRET: jwtSecret,
-  }
+  },
 };
 
 export default nextConfig;

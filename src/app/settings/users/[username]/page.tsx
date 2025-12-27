@@ -3,8 +3,8 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
-import { UserStats } from "@/lib/user_stats";
-import { HistoryEntry } from "@/lib/history";
+import type { UserStats } from "@/lib/user_stats";
+import type { HistoryEntry } from "@/lib/history";
 import { HistoryModal } from "@/components/HistoryModal";
 import { useLanguage } from "@/components/LanguageContext";
 

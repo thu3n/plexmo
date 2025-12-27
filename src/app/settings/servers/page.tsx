@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLanguage } from "@/components/LanguageContext";
 import { ServersTab } from "./components/ServersTab";
@@ -8,7 +8,7 @@ import { LibrariesTab } from "./components/LibrariesTab";
 import { UsersTab } from "./components/UsersTab";
 import clsx from "clsx";
 
-export default function ServersPage() {
+function ServersContent() {
     const { t } = useLanguage();
     const searchParams = useSearchParams();
     const initialTab = (searchParams.get("tab") as "servers" | "libraries" | "users") || "servers";
@@ -18,7 +18,7 @@ export default function ServersPage() {
     // For now simple internal state
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex space-x-1 rounded-xl bg-white/5 p-1 w-fit">
                 {(["servers", "libraries", "users"] as const).map((tab) => (
                     <button
@@ -42,5 +42,13 @@ export default function ServersPage() {
                 {activeTab === "users" && <UsersTab />}
             </div>
         </div>
+    );
+}
+
+export default function ServersPage() {
+    return (
+        <Suspense fallback={<div className="p-8 text-center text-white/50">Loading settings...</div>}>
+            <ServersContent />
+        </Suspense>
     );
 }

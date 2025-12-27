@@ -1,6 +1,6 @@
 "use client";
 
-import { PlexSession } from "@/lib/plex";
+import type { PlexSession } from "@/lib/plex";
 import { useEffect, useState } from "react";
 
 const stateColor = (state: string) => {

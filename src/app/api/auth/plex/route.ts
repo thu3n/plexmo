@@ -3,7 +3,44 @@ import { createSession, getPlexUser, verifyAccess } from "@/lib/auth";
 
 // ... (imports)
 
-// ... (GET handler remains same)
+export async function GET(req: NextRequest) {
+    try {
+        const clientIdentifier = "plexmo-server";
+
+        const headers = {
+            "Accept": "application/json",
+            "X-Plex-Product": "Plexmo",
+            "X-Plex-Client-Identifier": clientIdentifier,
+            "X-Plex-Device": "Web",
+            "X-Plex-Model": "Plexmo",
+        };
+
+        const response = await fetch("https://plex.tv/api/v2/pins?strong=true", {
+            method: "POST",
+            headers,
+        });
+
+        if (!response.ok) {
+            console.error("Plex PIN error", await response.text());
+            return NextResponse.json({ error: "Failed to create PIN" }, { status: response.status });
+        }
+
+        const data = await response.json();
+
+        // Construct the auth URL
+        const authUrl = `https://app.plex.tv/auth#?clientID=${clientIdentifier}&code=${data.code}&context[device][product]=Plexmo`;
+
+        return NextResponse.json({
+            id: data.id,
+            code: data.code,
+            authUrl
+        });
+
+    } catch (error) {
+        console.error("GET Auth Error:", error);
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    }
+}
 
 export async function POST(req: NextRequest) {
     try {

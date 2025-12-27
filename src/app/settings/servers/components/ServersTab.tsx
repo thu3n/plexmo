@@ -5,7 +5,7 @@ import useSWR from "swr";
 import { SettingsSection, SettingsCard } from "../../components/SettingsComponents";
 import { useLanguage } from "@/components/LanguageContext";
 import { Plus, Trash2, Edit2, X } from "lucide-react";
-import { type PublicServer } from "@/lib/servers";
+import type { PublicServer } from "@/lib/servers";
 import clsx from "clsx";
 import { flattenResources } from "@/lib/plex-utils";
 

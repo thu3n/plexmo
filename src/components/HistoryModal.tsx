@@ -1,7 +1,7 @@
 "use client";
 
-import { HistoryEntry } from "@/lib/history";
-import { PlexSession } from "@/lib/plex";
+import type { HistoryEntry } from "@/lib/history";
+import type { PlexSession } from "@/lib/plex";
 import { useEffect, useState } from "react";
 import { formatAudioChannels, formatCodec, formatVideoRes, getPlayerIcon, getSplitDisplayTitle, DetailBadge, HoverReveal } from "./HistoryHelpers";
 import { X } from "lucide-react";

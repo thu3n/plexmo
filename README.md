@@ -112,5 +112,5 @@ A separate, secure container instance (running `PLEXMO_MODE=portal`) designed to
 *   **Integration**: View user request stats (total requests, fulfillment rate) alongside watch history.
 
 <div align="center">
-  <small>Built with ❤️ by <a href="https://github.com/thu3n">Elias Thuen</a></small>
+  <small>Built with ❤️ by <a href="https://github.com/thu3n">Thu3n</a></small>
 </div>

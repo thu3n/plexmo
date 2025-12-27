@@ -1,7 +1,7 @@
 "use client";
 
-import { HistoryEntry } from "@/lib/history";
-import { PlexSession } from "@/lib/plex";
+import type { HistoryEntry } from "@/lib/history";
+import type { PlexSession } from "@/lib/plex";
 import { useState } from "react";
 import { useLanguage } from "./LanguageContext";
 import { useRouter } from "next/navigation";

@@ -1,6 +1,7 @@
 import { getDashboardSnapshot } from "@/lib/plex";
 import { syncHistory } from "@/lib/history";
 import { db } from "@/lib/db";
+import { getSetting, setSetting } from "@/lib/settings";
 import { sendSessionStartNotification, sendSessionStopNotification } from "./discord";
 
 export async function runCronJob() {
@@ -37,6 +38,39 @@ export async function runCronJob() {
         const combinedSessions = results
             .filter(r => r.status === 'fulfilled')
             .flatMap(r => (r as PromiseFulfilledResult<any>).value.sessions || []);
+
+        // Track Most Concurrent Streams (History)
+        try {
+            const currentCount = combinedSessions.length;
+            if (currentCount > 0) {
+                // Check last snapshot to avoid duplicates
+                const lastSnapshot = db.prepare("SELECT count, sessions FROM concurrent_snapshots ORDER BY timestamp DESC LIMIT 1").get() as any;
+
+                let shouldLog = true;
+                if (lastSnapshot) {
+                    const lastSessions = JSON.parse(lastSnapshot.sessions);
+                    // Simple check: if count differs, log.
+                    if (lastSnapshot.count === currentCount) {
+                        // Deep check: map session IDs to see if they are the same
+                        const currentIds = combinedSessions.map((s: any) => s.id).sort().join(',');
+                        const lastIds = lastSessions.map((s: any) => s.id).sort().join(',');
+
+                        if (currentIds === lastIds) {
+                            shouldLog = false;
+                        }
+                    }
+                }
+
+                if (shouldLog) {
+                    db.prepare("INSERT INTO concurrent_snapshots (count, sessions, timestamp) VALUES (?, ?, ?)")
+                        .run(currentCount, JSON.stringify(combinedSessions), Date.now());
+                }
+            }
+        } catch (e) {
+            console.error("Failed to update statistics:", e);
+        }
+
+
 
         // Always run rule checks to ensure closed sessions are processed/cleaned up
         // even if no active sessions exist (e.g. to close open rule events)

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerRules, toggleServerRule } from "@/lib/rules";
+import { getRuleServers, toggleServerRule } from "@/lib/rules";
 
 export async function GET(
     request: Request,
     { params }: { params: Promise<{ key: string }> }
 ) {
     const { key } = await params;
-    const servers = getServerRules(key);
+    const servers = getRuleServers(key);
     return NextResponse.json(servers);
 }
 

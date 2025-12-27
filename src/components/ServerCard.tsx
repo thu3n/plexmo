@@ -1,4 +1,4 @@
-import { PublicServer } from "@/lib/servers";
+import type { PublicServer } from "@/lib/servers";
 import { useLanguage } from "./LanguageContext";
 
 export const ServerCard = ({

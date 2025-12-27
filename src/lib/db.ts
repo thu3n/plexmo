@@ -54,7 +54,16 @@ let dbInstance: any;
 
 try {
   const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
+
+  // Use DELETE mode on dev/windows to prevent WAL persistence issues during restart
+  if (process.env.NODE_ENV === 'production') {
+    db.pragma("journal_mode = WAL");
+  } else {
+    // Force checkpoint to flush any existing WAL data before switching
+    try { db.pragma("wal_checkpoint(RESTART)"); } catch (e) { }
+    db.pragma("journal_mode = DELETE");
+  }
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS servers (
       id TEXT PRIMARY KEY,
@@ -208,6 +217,13 @@ try {
       settings TEXT NOT NULL,
       discordWebhookId TEXT,
       createdAt TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS concurrent_snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      count INTEGER NOT NULL,
+      sessions TEXT NOT NULL,
+      timestamp INTEGER NOT NULL
     );
   `);
 
