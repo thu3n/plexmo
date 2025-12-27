@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, Menu, Settings, Server, Library, Users, ShieldCheck, Activity, UploadCloud } from "lucide-react";
+import { ArrowLeft, Menu, Settings, Server, ShieldCheck, Activity, UploadCloud, Bell, List } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
@@ -13,9 +13,9 @@ import { useLanguage } from "@/components/LanguageContext";
 const navItems = [
     { id: "general", icon: Settings, label: "settings.general", href: "/settings/general" },
     { id: "servers", icon: Server, label: "settings.servers", href: "/settings/servers" },
-    { id: "libraries", icon: Library, label: "settings.libraries", href: "/settings/libraries" },
-    { id: "users", icon: Users, label: "settings.users", href: "/settings/users" },
     { id: "access", icon: ShieldCheck, label: "settings.access", href: "/settings/access" },
+    { id: "notifications", icon: Bell, label: "settings.notifications", href: "/settings/notifications" },
+    { id: "rules", icon: List, label: "settings.rules", href: "/settings/rules" },
     { id: "jobs", icon: Activity, label: "settings.jobs", href: "/settings/jobs" },
     { id: "import", icon: UploadCloud, label: "settings.import", href: "/settings/import" },
 ];

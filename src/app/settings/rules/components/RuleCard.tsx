@@ -98,7 +98,7 @@ export default function RuleCard({ rule, onEdit, onDelete, onToggle }: RuleCardP
                     </div>
 
                     {/* Hover Actions */}
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0 duration-200">
+                    <div className="flex gap-1 transition-all duration-200 opacity-100 translate-x-0 lg:opacity-0 lg:translate-x-4 lg:group-hover:opacity-100 lg:group-hover:translate-x-0">
                         <button
                             onClick={() => onToggle(rule.id, !rule.enabled)}
                             className={clsx(
