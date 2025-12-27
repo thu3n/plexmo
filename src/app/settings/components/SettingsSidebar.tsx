@@ -11,7 +11,9 @@ import {
     Users,
     ShieldCheck,
     Activity,
-    UploadCloud
+    UploadCloud,
+    Bell,
+    List
 } from "lucide-react";
 import { UserMenu } from "@/components/UserMenu";
 import { useLanguage } from "@/components/LanguageContext";
@@ -19,9 +21,9 @@ import { useLanguage } from "@/components/LanguageContext";
 const navItems = [
     { id: "general", icon: Settings, label: "settings.general", href: "/settings/general" },
     { id: "servers", icon: Server, label: "settings.servers", href: "/settings/servers" },
-    { id: "libraries", icon: Library, label: "settings.libraries", href: "/settings/libraries" },
-    { id: "users", icon: Users, label: "settings.users", href: "/settings/users" },
     { id: "access", icon: ShieldCheck, label: "settings.access", href: "/settings/access" },
+    { id: "notifications", icon: Bell, label: "settings.notifications", href: "/settings/notifications" },
+    { id: "rules", icon: List, label: "settings.rules", href: "/settings/rules" },
     { id: "jobs", icon: Activity, label: "settings.jobs", href: "/settings/jobs" },
     { id: "import", icon: UploadCloud, label: "settings.import", href: "/settings/import" },
 ];
@@ -73,7 +75,18 @@ export function SettingsSidebar() {
                                     </motion.div>
                                 )}
                                 <item.icon className={clsx("w-5 h-5 relative z-10 transition-colors duration-300", isActive ? "text-amber-400" : "group-hover:text-white/80")} />
-                                <span className="relative z-10">{t(item.label) === item.label ? (item.label.split('.')[1].charAt(0).toUpperCase() + item.label.split('.')[1].slice(1)) : t(item.label)}</span>
+                                <span className="relative z-10">
+                                    {(() => {
+                                        const translated = t(item.label);
+                                        if (translated !== item.label) return translated;
+                                        // Fallback: try to format settings.key -> Key
+                                        const parts = item.label.split('.');
+                                        if (parts.length > 1) {
+                                            return parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
+                                        }
+                                        return item.label;
+                                    })()}
+                                </span>
                             </Link>
                         );
                     })}

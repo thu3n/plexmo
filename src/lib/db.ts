@@ -163,6 +163,52 @@ try {
       removeAfterLogin INTEGER DEFAULT 1,
       expiresAt TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS rules (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      isActive INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS user_rules (
+      userId TEXT NOT NULL,
+      ruleKey TEXT NOT NULL,
+      PRIMARY KEY (userId, ruleKey)
+    );
+
+    CREATE TABLE IF NOT EXISTS server_rules (
+      serverId TEXT NOT NULL,
+      ruleKey TEXT NOT NULL,
+      PRIMARY KEY (serverId, ruleKey)
+    );
+
+    CREATE TABLE IF NOT EXISTS rule_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ruleKey TEXT NOT NULL,
+      userId TEXT NOT NULL,
+      triggeredAt TEXT NOT NULL,
+      endedAt TEXT,
+      details TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS discord_webhooks (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL,
+      events TEXT NOT NULL,
+      enabled INTEGER DEFAULT 1,
+      createdAt TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS rule_instances (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      name TEXT NOT NULL,
+      enabled INTEGER DEFAULT 1,
+      settings TEXT NOT NULL,
+      discordWebhookId TEXT,
+      createdAt TEXT NOT NULL
+    );
   `);
 
 
@@ -202,10 +248,36 @@ try {
     db.prepare("ALTER TABLE active_sessions ADD COLUMN pausedCounter INTEGER DEFAULT 0").run();
   } catch (e: any) { }
 
+  // Migration: Add pausedSince to active_sessions (For Kill Paused Stream Rule)
+  try {
+    db.prepare("ALTER TABLE active_sessions ADD COLUMN pausedSince INTEGER").run();
+  } catch (e: any) { }
+
   // Migration: Add isAdmin to users
   try {
     db.prepare("ALTER TABLE users ADD COLUMN isAdmin INTEGER DEFAULT 0").run();
   } catch (e: any) { }
+
+  // Migration: Add endedAt to rule_events
+  try {
+    db.prepare("ALTER TABLE rule_events ADD COLUMN endedAt TEXT").run();
+  } catch (e: any) { }
+
+  // Migration: Add discordWebhookIds to rule_instances and migrate data
+  try {
+    db.prepare("ALTER TABLE rule_instances ADD COLUMN discordWebhookIds TEXT").run();
+    // Migrate existing single ID to array
+    const rules = db.prepare("SELECT id, discordWebhookId FROM rule_instances WHERE discordWebhookId IS NOT NULL").all() as any[];
+    const updateStmt = db.prepare("UPDATE rule_instances SET discordWebhookIds = ? WHERE id = ?");
+    for (const rule of rules) {
+      if (rule.discordWebhookId) {
+        updateStmt.run(JSON.stringify([rule.discordWebhookId]), rule.id);
+      }
+    }
+    console.log("[Migration] Migrated rule webhooks to multi-select format");
+  } catch (e: any) {
+    // Column likely exists
+  }
 
   // Migration: Create libraries table if it doesn't exist (handled by CREATE TABLE IF NOT EXISTS above, 
   // but if we were adding columns to existing, we'd do it here. 

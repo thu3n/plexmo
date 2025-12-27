@@ -1,6 +1,7 @@
 import { getDashboardSnapshot } from "@/lib/plex";
 import { getServerForDashboard } from "@/lib/servers";
 import { NextResponse } from "next/server";
+import { checkAndLogViolations } from "@/lib/rules";
 
 export async function GET(request: Request) {
   try {
@@ -96,6 +97,9 @@ export async function GET(request: Request) {
       },
       appName: successResults.find(r => r.appName)?.appName || "Plexmo"
     };
+
+    // Check rules on aggregated sessions
+    checkAndLogViolations(aggregated.sessions);
 
     return NextResponse.json(aggregated, { status: 200 });
 

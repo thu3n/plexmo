@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
-import { SettingsSection, SettingsCard } from "../components/SettingsComponents";
+import { SettingsSection, SettingsCard } from "../../components/SettingsComponents";
 import { useLanguage } from "@/components/LanguageContext";
 import { Folder, RefreshCw, Eye } from "lucide-react";
 import clsx from "clsx";
@@ -16,7 +16,7 @@ const fetchJson = async <T,>(url: string): Promise<T> => {
     return response.json();
 };
 
-export default function LibrariesSettingsPage() {
+export function LibrariesTab() {
     const { t } = useLanguage();
     const { data: dashboardData, isLoading: dashboardLoading } = useSWR<{ libraries: LibrarySection[] }>("/api/dashboard", fetchJson);
     const { data: serversData } = useSWR<{ servers: PublicServer[] }>("/api/servers", fetchJson);
@@ -62,7 +62,7 @@ export default function LibrariesSettingsPage() {
     })();
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <SettingsSection
                 title={t("settings.libraries")}
                 description={t("settings.librariesDesc")}

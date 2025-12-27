@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { db } from "./db";
 
-type DbServer = {
+export type DbServer = {
   id: string;
   name: string;
   baseUrl: string;

@@ -1,6 +1,7 @@
 import { getDashboardSnapshot } from "@/lib/plex";
 import { syncHistory } from "@/lib/history";
 import { db } from "@/lib/db";
+import { sendSessionStartNotification, sendSessionStopNotification } from "./discord";
 
 export async function runCronJob() {
     try {
@@ -15,14 +16,32 @@ export async function runCronJob() {
             servers.map(async (server) => {
                 try {
                     const snapshot = await getDashboardSnapshot(server);
-                    syncHistory(server, snapshot.sessions);
-                    return { server: server.name, status: "ok" };
+                    const { newSessions, endedSessions } = syncHistory(server, snapshot.sessions);
+
+                    // Send Notifications (Fire and forget to not block sync)
+                    if (newSessions.length > 0) {
+                        newSessions.forEach(s => sendSessionStartNotification(s).catch(e => console.error("Failed to send start notification", e)));
+                    }
+                    if (endedSessions.length > 0) {
+                        endedSessions.forEach(s => sendSessionStopNotification(s).catch(e => console.error("Failed to send stop notification", e)));
+                    }
+
+                    return { server: server.name, status: "ok", sessions: snapshot.sessions };
                 } catch (err) {
                     console.error(`Failed to sync server ${server.name}:`, err);
                     return { server: server.name, status: "error", error: String(err) };
                 }
             })
         );
+
+        const combinedSessions = results
+            .filter(r => r.status === 'fulfilled')
+            .flatMap(r => (r as PromiseFulfilledResult<any>).value.sessions || []);
+
+        // Always run rule checks to ensure closed sessions are processed/cleaned up
+        // even if no active sessions exist (e.g. to close open rule events)
+        const { checkAndLogViolations } = await import("./rules");
+        await checkAndLogViolations(combinedSessions);
 
         return {
             success: true,

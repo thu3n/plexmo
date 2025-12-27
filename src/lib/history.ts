@@ -30,16 +30,16 @@ const insertHistory = db.prepare(`
 ` as any);
 
 const insertActive = db.prepare(`
-  INSERT INTO active_sessions (
-    sessionId, serverId, user, title, subtitle, ratingKey, startTime, lastSeen, state, platform, device, meta_json, pausedCounter
+  INSERT OR REPLACE INTO active_sessions (
+    sessionId, serverId, user, title, subtitle, ratingKey, startTime, lastSeen, state, platform, device, meta_json, pausedCounter, pausedSince
   ) VALUES (
-    @sessionId, @serverId, @user, @title, @subtitle, @ratingKey, @startTime, @lastSeen, @state, @platform, @device, @meta_json, @pausedCounter
+    @sessionId, @serverId, @user, @title, @subtitle, @ratingKey, @startTime, @lastSeen, @state, @platform, @device, @meta_json, @pausedCounter, @pausedSince
   )
 ` as any);
 
 const updateActive = db.prepare(`
   UPDATE active_sessions 
-  SET lastSeen = @lastSeen, state = @state, meta_json = @meta_json, pausedCounter = @pausedCounter 
+  SET lastSeen = @lastSeen, state = @state, meta_json = @meta_json, pausedCounter = @pausedCounter, pausedSince = @pausedSince 
   WHERE sessionId = @sessionId
 ` as any);
 
@@ -79,29 +79,43 @@ type ActiveSessionRow = {
   device?: string;
   meta_json?: string;
   pausedCounter: number;
+  pausedSince: number | null;
 };
 
 export const syncHistory = (server: PlexServerConfig, currentSessions: PlexSession[]) => {
-  if (!server.id) return;
+  if (!server.id) return { newSessions: [], endedSessions: [] };
 
   const serverId = server.id;
   const now = Date.now();
   const storedSessions = getActiveSessions.all({ serverId }) as ActiveSessionRow[];
 
+  const newSessions: PlexSession[] = [];
+  const endedSessions: HistoryEntry[] = [];
+
   // 1. Process current sessions: Insert new ones, update existing ones
   for (const session of currentSessions) {
     const existing = storedSessions.find((s) => s.sessionId === session.id);
+    const isPaused = session.state === 'paused';
 
     if (existing) {
       // Update heartbeat
       // Calculate pause duration
       let pausedCounter = existing.pausedCounter;
-      if (existing.state === 'paused') {
+      let pausedSince = existing.pausedSince;
+
+      if (isPaused) {
+        // If it was already paused, keep pausedSince. If newly paused, set it.
+        if (!pausedSince) pausedSince = now;
+
         // If it was paused, add elapsed time to counter
+        // (now - existing.lastSeen) in ms, convert to seconds
         const elapsed = (now - existing.lastSeen) / 1000;
         if (elapsed > 0) {
           pausedCounter += Math.round(elapsed);
         }
+      } else {
+        // Not paused
+        pausedSince = null;
       }
 
       updateActive.run({
@@ -110,9 +124,12 @@ export const syncHistory = (server: PlexServerConfig, currentSessions: PlexSessi
         sessionId: session.id,
         meta_json: JSON.stringify(session),
         pausedCounter,
+        pausedSince
       });
     } else {
       // New session started
+      newSessions.push(session);
+
       const viewOffset = session.viewOffset || 0;
       const calculatedStartTime = now - viewOffset;
 
@@ -130,6 +147,7 @@ export const syncHistory = (server: PlexServerConfig, currentSessions: PlexSessi
         device: session.device,
         meta_json: JSON.stringify(session),
         pausedCounter: 0,
+        pausedSince: isPaused ? now : null
       });
     }
   }
@@ -146,7 +164,7 @@ export const syncHistory = (server: PlexServerConfig, currentSessions: PlexSessi
 
       // Only log if it lasted more than a reasonable amount (e.g. 10s)
       if (durationSeconds > 10) {
-        insertHistory.run({
+        const historyEntry: HistoryEntry = {
           id: crypto.randomUUID(),
           serverId,
           user: stored.user,
@@ -158,16 +176,22 @@ export const syncHistory = (server: PlexServerConfig, currentSessions: PlexSessi
           duration: durationSeconds,
           platform: stored.platform,
           device: stored.device,
-          ip: null, // IP not currently extracted from session
-          meta_json: stored.meta_json || null,
+          ip: undefined, // IP not currently extracted from session
+          meta_json: stored.meta_json || undefined,
           pausedCounter: stored.pausedCounter,
-        });
+          // Add thumbs if we can recover them from meta_json or stored fields (not stored currently)
+        };
+
+        insertHistory.run(historyEntry);
+        endedSessions.push(historyEntry);
       }
 
       // Remove from active
       deleteActive.run({ sessionId: stored.sessionId });
     }
   }
+
+  return { newSessions, endedSessions };
 };
 
 export type HistoryParams = {

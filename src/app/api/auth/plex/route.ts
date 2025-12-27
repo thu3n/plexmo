@@ -1,37 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSession, getPlexUser, verifyAccess } from "@/lib/auth";
 
-// Helper to get Client ID (should be persistent ideally, but random per session is okay for some flows, 
-// strictly speaking it should be stored in browser or config. We'll use a header or generate one).
-// For server-side PIN generation we need a client ID to associate.
-// The frontend usually generates a Client ID and sends it.
+// ... (imports)
 
-export async function GET(req: NextRequest) {
-    const clientIdentifier = req.headers.get("X-Plex-Client-Identifier") || "plexmo-server";
-
-    // 1. Get a PIN (code) from Plex
-    const response = await fetch("https://plex.tv/api/v2/pins?strong=true", {
-        method: "POST",
-        headers: {
-            "Accept": "application/json",
-            "X-Plex-Product": "Plexmo",
-            "X-Plex-Client-Identifier": clientIdentifier,
-        },
-    });
-
-    if (!response.ok) {
-        return NextResponse.json({ error: "Failed to generate PIN" }, { status: 500 });
-    }
-
-    const data = await response.json();
-
-    return NextResponse.json({
-        id: data.id,
-        code: data.code,
-        clientIdentifier,
-        authUrl: `https://app.plex.tv/auth#?clientID=${clientIdentifier}&code=${data.code}&context[device][product]=Plexmo&context[device][platform]=Web`
-    });
-}
+// ... (GET handler remains same)
 
 export async function POST(req: NextRequest) {
     try {

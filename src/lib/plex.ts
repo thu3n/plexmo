@@ -69,7 +69,7 @@ type RawVideo = {
     progress?: string | number;
     [key: string]: unknown;
   };
-  Session?: { bandwidth?: string | number; location?: string };
+  Session?: { bandwidth?: string | number; location?: string; id?: string };
   Player?: { platform?: string; product?: string; title?: string; state?: string; address?: string; remotePublicAddress?: string; local?: string | number; relayed?: string | number; secure?: string | number };
   User?: { title?: string; thumb?: string };
   ratingKey?: string;
@@ -141,6 +141,8 @@ export type PlexServerConfig = {
 
 export type PlexSession = {
   id: string;
+  sessionKey?: string;
+  sessionId?: string;
   title: string;
   grandparentTitle?: string;
   parentTitle?: string;
@@ -357,6 +359,10 @@ export const fetchSessions = async (
   // Resolve server config to build full image URLs
   const { baseUrl, token } = resolveServer(server);
 
+  if (videos.length > 0) {
+    // console.log("[DEBUG] Raw Video Object Sample:", JSON.stringify(videos[0], null, 2));
+  }
+
   // Fetch metadata for all sessions in parallel to avoid waterfalls
   // We need metadata to get the TRUE original file details (container, codecs, etc.)
   // because /status/sessions often reports the temporary transcode target as the source.
@@ -531,6 +537,8 @@ export const fetchSessions = async (
 
     return {
       id: video.ratingKey || video.key || crypto.randomUUID(),
+      sessionKey: (video.sessionKey as string) || (video.Session as any)?.id || undefined,
+      sessionId: video.Session?.id as string | undefined,
       title: formatTitle({ ...video, title: decodePlexString(video.title) }),
       grandparentTitle: decodePlexString(video.grandparentTitle),
       parentTitle: decodePlexString(video.parentTitle),
@@ -605,6 +613,10 @@ export const fetchSessions = async (
       grandparentThumb: video.grandparentThumb,
     };
   });
+
+  if (sessions.length > 0) {
+    // console.log("[DEBUG] Mapped Session Sample:", JSON.stringify(sessions[0], null, 2));
+  }
 
   return {
     sessions,
@@ -785,5 +797,35 @@ export const fetchPlexUsers = async (
   } catch (error) {
     console.error(`Failed to fetch users for ${server?.name}:`, error);
     return [];
+  }
+};
+
+export const terminateSession = async (
+  sessionId: string,
+  serverConfig: PlexServerConfig,
+  reason: string = "Terminated by Admin"
+) => {
+  try {
+    const { baseUrl, token } = resolveServer(serverConfig);
+    const params = new URLSearchParams({
+      sessionId,
+      reason,
+      "X-Plex-Token": token,
+    });
+
+    const url = `${baseUrl}/status/sessions/terminate?${params.toString()}`;
+
+
+    const res = await fetch(url, { method: "GET" });
+
+    // 404 means session is already terminated/not found - treat as success
+    if (!res.ok && res.status !== 404) {
+      throw new Error(`Failed to terminate session: ${res.statusText}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Failed to terminate session:", error);
+    throw error;
   }
 };

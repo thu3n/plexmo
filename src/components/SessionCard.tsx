@@ -134,7 +134,7 @@ const getPlayerIcon = (player: string | undefined, platform: string | undefined,
 
 
 
-export const SessionCard = ({ session, serverColor }: { session: PlexSession; serverColor?: string }) => {
+export const SessionCard = ({ session, serverColor, isLimitExceeded }: { session: PlexSession; serverColor?: string; isLimitExceeded?: boolean }) => {
     const { t } = useLanguage();
     const barColor = serverColor || "#f59e0b";
     const isTranscoding = session.decision?.toLowerCase() === "transcode";
@@ -142,7 +142,10 @@ export const SessionCard = ({ session, serverColor }: { session: PlexSession; se
 
     // Live Timer
     const [currentOffset, setCurrentOffset] = useState(session.viewOffset);
-    const [showUser, setShowUser] = useState(false);
+
+    // Stop Stream State
+    const [showStopConfirm, setShowStopConfirm] = useState(false);
+    const [isTerminating, setIsTerminating] = useState(false);
 
     useEffect(() => { setCurrentOffset(session.viewOffset); }, [session.viewOffset]);
 
@@ -154,11 +157,101 @@ export const SessionCard = ({ session, serverColor }: { session: PlexSession; se
         return () => clearInterval(interval);
     }, [session.state, session.duration]);
 
+    const handleStopStream = async () => {
+        const idToUse = session.sessionId || session.sessionKey;
+
+        if (!idToUse) {
+            alert("Unable to stop stream: Session ID missing. Please refresh the page.");
+            console.error("Missing sessionId/sessionKey:", session);
+            return;
+        }
+
+        setIsTerminating(true);
+        try {
+            const res = await fetch("/api/session/terminate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    sessionId: idToUse,
+                    serverId: session.serverId,
+                    reason: "Stopped by Admin"
+                })
+            });
+
+            if (!res.ok) throw new Error("Failed to stop stream");
+
+            // Optionally we could trigger a refresh here, but SWR will catch it eventually.
+            // For now, let's just close the modal. The user will see it disappear on next poll.
+            setShowStopConfirm(false);
+
+        } catch (error) {
+            console.error("Stop stream error:", error);
+            alert("Failed to stop stream");
+            setIsTerminating(false);
+        }
+    };
+
     const progressPercent = session.duration > 0 ? Math.min(100, (currentOffset / session.duration) * 100) : 0;
     const bitrate = session.quality || (session.bandwidth ? `${Math.round(session.bandwidth / 1000 * 10) / 10} Mbps` : null);
 
     return (
-        <div className="group glass-panel rounded-2xl overflow-hidden flex flex-col h-full transform transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl hover:shadow-black/50">
+        <div className={`group glass-panel rounded-2xl overflow-hidden flex flex-col h-full transform transition-all duration-300 hover:scale-[1.01] hover:shadow-2xl hover:shadow-black/50 relative ${isLimitExceeded ? "ring-2 ring-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.3)]" : ""}`}>
+
+            {/* Warning Badge for Rule Violation */}
+            {isLimitExceeded && (
+                <div className="absolute top-0 left-0 z-50 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-br-lg shadow-lg flex items-center gap-1 animate-pulse">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3">
+                        <path fillRule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" clipRule="evenodd" />
+                    </svg>
+                    LIMIT EXCEEDED
+                </div>
+            )}
+
+            {/* Stop Stream Confirmation Overlay */}
+            {showStopConfirm && (
+                <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-6 text-center animate-in fade-in duration-200">
+                    <div className="h-12 w-12 rounded-full bg-rose-500/20 text-rose-500 flex items-center justify-center mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                            <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-1.72 6.97a.75.75 0 1 0-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 1 0 1.06 1.06L12 13.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L13.06 12l1.72-1.72a.75.75 0 1 0-1.06-1.06L12 10.94l-1.72-1.72Z" clipRule="evenodd" />
+                        </svg>
+                    </div>
+                    <h3 className="text-white font-bold text-lg mb-1">Stop Stream?</h3>
+                    <p className="text-white/50 text-xs mb-6 px-4">
+                        Are you sure you want to kick <strong>{session.user}</strong>?
+                    </p>
+                    <div className="flex gap-2 w-full">
+                        <button
+                            onClick={() => setShowStopConfirm(false)}
+                            className="flex-1 py-2 rounded-lg bg-white/10 text-white font-medium text-sm hover:bg-white/20 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleStopStream}
+                            disabled={isTerminating}
+                            className="flex-1 py-2 rounded-lg bg-rose-500 text-white font-bold text-sm hover:bg-rose-600 transition-colors disabled:opacity-50"
+                        >
+                            {isTerminating ? "Stopping..." : "Confirm"}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Stop Button (Hover Reveal) */}
+            <button
+                onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowStopConfirm(true);
+                }}
+                className="absolute top-2 right-2 z-40 bg-black/60 hover:bg-rose-500 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-sm shadow-xl translate-y-2 group-hover:translate-y-0"
+                title="Stop Stream"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                    <path fillRule="evenodd" d="M4.5 7.5a3 3 0 013-3h9a3 3 0 013 3v9a3 3 0 01-3 3h-9a3 3 0 01-3-3v-9z" clipRule="evenodd" />
+                </svg>
+            </button>
+
             {/* Top Section: Poster + Info */}
             <div className="flex flex-row h-56 sm:h-64 w-full relative">
                 {/* Poster - Left Side */}

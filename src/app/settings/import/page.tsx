@@ -9,6 +9,9 @@ import clsx from "clsx";
 export default function ImportSettingsPage() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [status, setStatus] = useState<{ success?: boolean; message?: string; error?: string } | null>(null);
+    
+    // Warning Modal State
+    const [showWarning, setShowWarning] = useState(false);
 
     // --- Export Handler ---
     const handleExport = async () => {
@@ -32,8 +35,16 @@ export default function ImportSettingsPage() {
     };
 
     // --- Import Handlers ---
-    const handleTautulliImport = async (e: React.FormEvent) => {
+    
+    // 1. Initial click shows warning
+    const handleTautulliImportClick = (e: React.FormEvent) => {
         e.preventDefault();
+        setShowWarning(true);
+    };
+
+    // 2. Actual execution after confirmation
+    const executeImport = async () => {
+        setShowWarning(false); // Close modal
         setIsProcessing(true);
         setStatus(null);
         try {
@@ -49,7 +60,48 @@ export default function ImportSettingsPage() {
     };
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 relative"> 
+            {/* Warning Modal */}
+            {showWarning && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="w-full max-w-md bg-slate-900 border border-amber-500/30 rounded-2xl shadow-2xl p-6 relative overflow-hidden">
+                         {/* Background Glow */}
+                         <div className="absolute -top-20 -right-20 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+                        <div className="flex flex-col items-center text-center gap-4 relative z-10">
+                            <div className="h-16 w-16 bg-amber-500/20 rounded-full flex items-center justify-center mb-2">
+                                <AlertTriangle className="w-8 h-8 text-amber-500" />
+                            </div>
+                            
+                            <div>
+                                <h3 className="text-xl font-bold text-white mb-2">Important Warning</h3>
+                                <p className="text-white/70 text-sm leading-relaxed">
+                                    Have you named your Plexmo servers <strong className="text-white">exactly</strong> the same as in Tautulli?
+                                </p>
+                                <p className="text-white/50 text-xs mt-3 bg-white/5 p-3 rounded-lg border border-white/5">
+                                    Exact name matching is required for the import to correctly map your history to the right server.
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 w-full mt-2">
+                                <button 
+                                    onClick={() => setShowWarning(false)}
+                                    className="px-4 py-3 rounded-xl font-bold text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    onClick={executeImport}
+                                    className="px-4 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold shadow-lg shadow-amber-500/20 transition-all active:scale-95"
+                                >
+                                    Yes, Continue
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <SettingsSection
                 title="Data Management"
                 description="Export your data for backup or import from other sources."
@@ -106,7 +158,7 @@ export default function ImportSettingsPage() {
                                             </ol>
                                         </div>
 
-                                        <form onSubmit={handleTautulliImport}>
+                                        <form onSubmit={handleTautulliImportClick}>
                                             <button
                                                 type="submit"
                                                 disabled={isProcessing}

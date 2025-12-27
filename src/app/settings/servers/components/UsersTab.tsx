@@ -3,10 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
-import { SettingsSection, SettingsCard } from "../components/SettingsComponents";
+import { SettingsSection, SettingsCard } from "../../components/SettingsComponents";
 import { useLanguage } from "@/components/LanguageContext";
 import { Search, ArrowUpDown, UserPlus, UserCheck, Shield } from "lucide-react";
-import clsx from "clsx";
 import type { PlexUser } from "@/lib/plex";
 import type { PublicServer } from "@/lib/servers";
 
@@ -16,7 +15,7 @@ const fetchJson = async <T,>(url: string): Promise<T> => {
     return response.json();
 };
 
-export default function UsersSettingsPage() {
+export function UsersTab() {
     const { t } = useLanguage();
     const { data: usersData, mutate: mutateUsers, isLoading } = useSWR<{ users: (PlexUser & { isImported?: boolean; isAdmin?: boolean })[] }>("/api/users", fetchJson);
     const { data: serversData } = useSWR<{ servers: PublicServer[] }>("/api/servers", fetchJson);
@@ -60,7 +59,7 @@ export default function UsersSettingsPage() {
     };
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <SettingsSection
                 title={t("settings.users")}
                 description={t("settings.usersDesc")}
@@ -116,7 +115,7 @@ export default function UsersSettingsPage() {
                         filteredUsers.map((user, idx) => (
                             <Link
                                 key={`${user.id}-${idx}`}
-                                href={`/settings/users/${encodeURIComponent(user.username)}`}
+                                href={`/settings/users/${encodeURIComponent(user.username)}?returnTo=servers`}
                                 className="block"
                             >
                                 <SettingsCard className="h-full hover:border-amber-500/50 transition-colors group/card">

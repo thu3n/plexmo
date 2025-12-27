@@ -51,6 +51,64 @@ export default function Home() {
   const [selectedServerId, setSelectedServerId] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
 
+  // Fetch rules for enforcement
+  const [maxStreamRule, setMaxStreamRule] = useState<{
+    value: number,
+    enabled: boolean,
+    enforce: boolean,
+    excludeSameIp: boolean
+  }>({ value: 0, enabled: false, enforce: false, excludeSameIp: false });
+  const [ruleUsers, setRuleUsers] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const fetchRules = async () => {
+      try {
+        const rulesRes = await fetch("/api/rules/instances");
+        if (rulesRes.ok) {
+          const rules = await rulesRes.json();
+          const limitRule = rules.find((r: any) => r.type === "max_concurrent_streams");
+
+          if (limitRule) {
+            setMaxStreamRule({
+              value: parseInt(limitRule.settings.limit, 10),
+              enabled: limitRule.enabled,
+              enforce: limitRule.settings.enforce,
+              excludeSameIp: limitRule.settings.exclude_same_ip || false
+            });
+
+            // Only fetch users if rule is enabled (or just always fetch to be safe)
+            // Note: Currently using hardcoded rule key for the users endpoint, likely need instance ID in future
+            // but the route /api/rules/max_concurrent_streams/users seems to rely on the type/key convention for now?
+            // Actually, Step 166 showed getUserRules/GlobalRules. 
+            // Let's assume the legacy endpoint might still work or I might need to adjust.
+            // But wait, the previous code used "max_concurrent_streams". 
+            // Let's check if that endpoint exists. 
+            // In Step 181, I saw `src/app/api/rules/[key]`. So likely `/api/rules/max_concurrent_streams/users` works.
+            const usersRes = await fetch(`/api/rules/${limitRule.id}/users`);
+            if (!usersRes.ok) {
+              // Fallback to legacy key if ID fails, or just try key first if that's how it was
+              // The old code used "max_concurrent_streams".
+              // I'll try the ID first as that is more robust with the new system. 
+              const legacyUsersRes = await fetch("/api/rules/max_concurrent_streams/users");
+              if (legacyUsersRes.ok) {
+                const users = await legacyUsersRes.json();
+                const enabledUsernames = new Set<string>(users.filter((u: any) => u.enabled).map((u: any) => u.username));
+                setRuleUsers(enabledUsernames);
+              }
+            } else {
+              const users = await usersRes.json();
+              const enabledUsernames = new Set<string>(users.filter((u: any) => u.enabled).map((u: any) => u.username));
+              setRuleUsers(enabledUsernames);
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch rules", e);
+      }
+    };
+    fetchRules();
+  }, []);
+
   // Monitor scroll for header styling
   useEffect(() => {
     const handleScroll = () => {
@@ -137,6 +195,31 @@ export default function Home() {
   const handleSelectServer = (id: string | null) => {
     setSelectedServerId(id);
   };
+
+  // Calculate violations
+  const userViolations = useMemo(() => {
+    // Only show badge if rule is enabled, limit is set, and NO acting configs (enforce/exclude) are active.
+    if (!maxStreamRule.enabled || maxStreamRule.value <= 0 || maxStreamRule.enforce || maxStreamRule.excludeSameIp) {
+      return new Set<string>();
+    }
+
+    const counts = new Map<string, number>();
+    // Count ALL active sessions per user (globally, not just filtered)
+    allSessions.forEach(s => {
+      const u = s.user;
+      counts.set(u, (counts.get(u) || 0) + 1);
+    });
+
+    const violators = new Set<string>();
+    counts.forEach((count, user) => {
+      // Check if user is subject to the rule
+      if (ruleUsers.has(user) && count > maxStreamRule.value) {
+        violators.add(user);
+      }
+    });
+
+    return violators;
+  }, [allSessions, maxStreamRule.enabled, maxStreamRule.value, maxStreamRule.enforce, maxStreamRule.excludeSameIp, ruleUsers]);
 
   // Helper to render interactive tags
   const renderInteractiveTags = (
@@ -436,10 +519,11 @@ export default function Home() {
               </div>
             ) : null}
 
-            {filteredSessions.map((session) => {
+            {filteredSessions.map((session, i) => {
               const serverObj = serversData?.servers.find(s => s.id === session.serverId);
               const color = getServerColor(session.serverId, serverObj?.color);
-              return <SessionCard key={`${session.serverId}-${session.id}`} session={session} serverColor={color} />;
+              const isLimitExceeded = userViolations.has(session.user);
+              return <SessionCard key={`${session.serverId}-${session.id}-${i}`} session={session} serverColor={color} isLimitExceeded={isLimitExceeded} />;
             })}
           </div>
         </div>
