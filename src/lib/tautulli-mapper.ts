@@ -157,12 +157,19 @@ export function mapTautulliToPlexmo(
 
     // Conversion needed:
     const startTimeMS = entry.started * 1000;
-    const stopTimeMS = entry.stopped * 1000;
+    let stopTimeMS = entry.stopped * 1000;
 
-    // Plexmo HistoryEntry.duration should be the WATCED duration (session duration) in Seconds
+    // Plexmo HistoryEntry.duration should be the WATCHED duration (session duration) in Seconds
     // This allows the frontend to show "watched for X minutes" in the duration column.
     // The Progress Bar uses meta.duration (Media Duration) vs viewOffset.
-    const durationSeconds = entry.stopped - entry.started;
+    let durationSeconds = entry.stopped - entry.started;
+
+    // CAP DURATION: Prevent stuck sessions > 24 hours (86400 seconds)
+    // This ensures statistics remain realistic even with bad imported data.
+    if (durationSeconds > 86400) {
+        durationSeconds = 86400;
+        stopTimeMS = startTimeMS + (86400 * 1000);
+    }
 
     return {
         id: `tautulli-${entry.id}`,
