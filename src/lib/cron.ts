@@ -77,6 +77,30 @@ export async function runCronJob() {
         const { checkAndLogViolations } = await import("./rules");
         await checkAndLogViolations(combinedSessions);
 
+        // EXTRA SAFETY: Clean up "stuck" sessions from active_sessions
+        // If a session hasn't been seen in > 2 hours, remove it.
+        // This prevents the "infinite duration" bug.
+        try {
+            const stuckCutoff = Date.now() - (2 * 60 * 60 * 1000); // 2 hours
+            const stuckSessions = db.prepare("SELECT * FROM active_sessions WHERE lastSeen < ?").all(stuckCutoff) as any[];
+
+            if (stuckSessions.length > 0) {
+                console.log(`[Cron] Found ${stuckSessions.length} stuck sessions. Cleaning up...`);
+                // Move them to history with a cap? Or just delete?
+                // For now, let's just delete them from active so they stop counting as concurrent.
+                // ideally, we might want to "close" them in history, but active_sessions is mirrors.
+                // The sync logic usually handles moving to history. If it's stuck here, it likely missed a stop event.
+
+                // Let's force an "Ended" event for them if they aren't in history effectively?
+                // Actually, simplest is just to remove from active_sessions so they don't clog up.
+                const cleanParams = stuckSessions.map(s => s.sessionId);
+                const deleteStmt = db.prepare(`DELETE FROM active_sessions WHERE sessionId IN (${cleanParams.map(() => '?').join(',')})`);
+                deleteStmt.run(...cleanParams);
+            }
+        } catch (e) {
+            console.error("[Cron] Failed to clean stuck sessions:", e);
+        }
+
         return {
             success: true,
             results: results.map(r => r.status === 'fulfilled' ? r.value : r.reason)
