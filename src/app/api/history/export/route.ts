@@ -10,7 +10,8 @@ export async function GET(request: Request) {
     // Auth Priority: 1. Session, 2. API Key (for 3rd party tools like Wrapperr)
 
     // 1. Check Session
-    const token = cookies().get("token")?.value;
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
     const sessionUser = token ? await verifyToken(token) : null;
 
     // 2. Check API Key

@@ -6,7 +6,8 @@ import { verifyToken } from "@/lib/jwt";
 
 export async function GET(request: Request) {
   // 1. Strict Authentication
-  const token = cookies().get("token")?.value;
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
   const user = token ? await verifyToken(token) : null;
 
   if (!user) {
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  
+
   // 2. Determine Secure Root (Import Directory)
   let configDir: string;
   if (process.env.CONFIG_DIR) {
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
   if (!fs.existsSync(allowedRoot)) {
     try {
       fs.mkdirSync(allowedRoot, { recursive: true });
-    } catch(e) {
+    } catch (e) {
       // ignore
     }
   }
@@ -45,7 +46,7 @@ export async function GET(request: Request) {
 
   // 3. Path Traversal Protection
   if (!currentPath.startsWith(path.resolve(allowedRoot))) {
-     return NextResponse.json({ error: "Access denied: Path outside allowed directory" }, { status: 403 });
+    return NextResponse.json({ error: "Access denied: Path outside allowed directory" }, { status: 403 });
   }
 
   try {

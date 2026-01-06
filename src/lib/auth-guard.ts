@@ -9,7 +9,8 @@ import { validateApiKey } from "@/lib/api-auth";
  */
 export async function authorizeApiKeyOrSession(request: Request) {
     // 1. Check Session
-    const token = cookies().get("token")?.value;
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
     if (token) {
         const user = await verifyToken(token);
         if (user) return user;
