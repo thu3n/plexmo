@@ -48,6 +48,8 @@ export async function verifyAccess(userToken: string): Promise<boolean> {
 
     // 1. If no servers, everyone is allowed (setup mode/fresh start)
     if (servers.length === 0) {
+        // [SECURITY] Log this event as it allows open access
+        console.warn("[AUTH] Setup Mode: Allowing access because no servers are configured.");
         return true;
     }
 
