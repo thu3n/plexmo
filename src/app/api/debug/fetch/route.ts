@@ -4,6 +4,14 @@ import { getServerById } from "@/lib/servers";
 
 export async function GET(req: NextRequest) {
     const libraryKey = req.nextUrl.searchParams.get("key") || '7'; // Default to a show library
+
+    // STRICT SECURITY: Prevent SSRF
+    // Only allow numeric library keys (e.g. "1", "7", "12")
+    if (!/^\d+$/.test(libraryKey)) {
+        return NextResponse.json({ error: "Invalid key. Only numeric library IDs are allowed." }, { status: 400 });
+    }
+
+    // Find a server
     // Find a server
     // We need to match the library key to a server?
     // Or just pick the first valid server.

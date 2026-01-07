@@ -35,7 +35,8 @@ export async function middleware(request: NextRequest) {
     const localApiUrl = `http://127.0.0.1:${port}`;
 
     // Optimization: Skip setup check for setup APIs to avoid recursion/double-hits
-    if (pathname.startsWith("/api/setup")) {
+    // STRICT SECURITY: Only allow the status check, nothing else.
+    if (pathname === "/api/setup/status") {
         return NextResponse.next();
     }
 

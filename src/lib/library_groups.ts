@@ -160,8 +160,8 @@ export const getGroupItemsPaginated = (groupId: string, page: number = 1, pageSi
 
     // Fetch Server Details for URL construction
     const servers = db.prepare("SELECT id, baseUrl, token, name FROM servers").all() as any[];
-    const serverMap = new Map<string, { baseUrl: string, token: string }>();
-    servers.forEach(s => serverMap.set(s.id, { baseUrl: s.baseUrl, token: s.token }));
+    const serverMap = new Map<string, { id: string, baseUrl: string, token: string }>();
+    servers.forEach(s => serverMap.set(s.id, { id: s.id, baseUrl: s.baseUrl, token: s.token }));
 
     // Helper to generate a fuzzy slug for fallbacks
     const getSlug = (title: string, year?: number) => {
@@ -216,7 +216,7 @@ export const getGroupItemsPaginated = (groupId: string, page: number = 1, pageSi
         if (row.thumb) {
             const s = serverMap.get(row.serverId);
             if (s && s.baseUrl && s.token) {
-                posterPath = `${s.baseUrl}${row.thumb}?X-Plex-Token=${s.token}`;
+                posterPath = `/api/proxy/image?serverId=${s.id}&thumb=${encodeURIComponent(row.thumb)}`;
             }
         }
 

@@ -10,35 +10,12 @@ const resolveSecret = () => {
     return process.env.JWT_SECRET;
   }
 
-  // 2. Persistent File
-  // Try to use the same 'config' volume convention as the DB
-  let secretPath = path.join(process.cwd(), "jwt.secret");
-
-  if (fs.existsSync("/app/config")) {
-    secretPath = "/app/config/jwt.secret";
-  } else if (fs.existsSync(path.join(process.cwd(), "config"))) {
-    secretPath = path.join(process.cwd(), "config", "jwt.secret");
-  }
-
-  // Check if file exists
-  if (fs.existsSync(secretPath)) {
-    const fileSecret = fs.readFileSync(secretPath, "utf-8").trim();
-    if (fileSecret.length > 0) {
-      return fileSecret;
-    }
-  }
-
-  // 3. Generate New Secret if missing
-  const newSecret = randomBytes(32).toString("hex");
-  try {
-    const dir = path.dirname(secretPath);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(secretPath, newSecret);
-    console.log(`[NextConfig] Generated new JWT secret at: ${secretPath}`);
-  } catch (e) {
-    console.error("[NextConfig] Failed to write auto-generated JWT secret:", e);
-  }
-  return newSecret;
+  // 2. Fallback to Memory-Only Secret (Dev/Temporary)
+  // This ensures that if no secret is provided, we don't crash, 
+  // but sessions will be invalidated on every server restart.
+  // This is secure by default as it doesn't persist secrets to disk.
+  console.warn("[NextConfig] ⚠️ No JWT_SECRET found. Generating temporary secret. Sessions will invalid on restart.");
+  return randomBytes(32).toString("hex");
 };
 
 const jwtSecret = resolveSecret();
@@ -58,6 +35,35 @@ const nextConfig: NextConfig = {
   env: {
     // Inject the resolved secret into the build/runtime environment
     JWT_SECRET: jwtSecret,
+  },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "X-DNS-Prefetch-Control",
+            value: "on",
+          },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
+          {
+            key: "X-Frame-Options",
+            value: "SAMEORIGIN",
+          },
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "origin-when-cross-origin",
+          },
+        ],
+      },
+    ];
   },
 };
 

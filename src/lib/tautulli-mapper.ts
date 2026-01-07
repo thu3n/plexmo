@@ -191,7 +191,6 @@ export function mapTautulliToPlexmo(
     return {
         id: `tautulli-${entry.id}`,
         serverId: serverMap[entry.server_id] || defaultServerId, // Tautulli Server ID -> mapped
-        userId: String(entry.user_id),
         user: entry.user,
         title: decodePlexString(entry.title) || "Unknown Title", // Decoded title
         subtitle: entry.media_type === 'episode'

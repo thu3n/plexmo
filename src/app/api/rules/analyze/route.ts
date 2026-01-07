@@ -13,7 +13,12 @@ export async function POST(req: NextRequest) {
         // Let's pass 'isGlobal' explicitly from frontend to be safe.
 
         const { id, settings } = rule;
-        const draftLimit = settings.limit;
+        const draftLimit = Number(settings.limit);
+
+        if (!isNaN(draftLimit) && draftLimit < 0) {
+            return NextResponse.json({ error: "Limit cannot be negative" }, { status: 400 });
+        }
+
         const draftIsEnforced = settings.enforce; // Only counting enforced rules? Or all? Usually all active rules count towards limit logic.
         // Actually Plexmo logic: `checkAndLogViolations` uses `limit`. Enforcement is separate action.
         // So we just check limits.

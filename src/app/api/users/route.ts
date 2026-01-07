@@ -2,6 +2,18 @@ import { listInternalServers } from "@/lib/servers";
 import { fetchPlexUsers, PlexUser } from "@/lib/plex";
 import { importUsers, listLocalUsers } from "@/lib/users";
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/jwt";
+
+// Simple sanitization helper
+function sanitize(input: any): string {
+    if (typeof input !== 'string') return input;
+    return input
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 
 export async function GET() {
     try {
@@ -61,6 +73,20 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
     try {
+        // 1. Authorization Guard (Strict Session Only)
+        // User requested that API Keys should NOT be allowed to create users.
+        const cookieStore = await cookies();
+        const token = cookieStore.get("token")?.value;
+
+        let sessionUser = null;
+        if (token) {
+            sessionUser = await verifyToken(token);
+        }
+
+        if (!sessionUser) {
+            return NextResponse.json({ error: "Unauthorized: Valid Session Required" }, { status: 401 });
+        }
+
         const body = await req.json();
         const { users } = body;
 
@@ -68,9 +94,17 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Invalid data" }, { status: 400 });
         }
 
-        importUsers(users);
+        // 2. Input Sanitization
+        const sanitizedUsers = users.map((u: any) => ({
+            ...u,
+            username: sanitize(u.username),
+            title: sanitize(u.title),
+            email: sanitize(u.email),
+        }));
 
-        return NextResponse.json({ success: true, count: users.length });
+        importUsers(sanitizedUsers);
+
+        return NextResponse.json({ success: true, count: sanitizedUsers.length });
     } catch (error) {
         console.error("Error importing users:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
