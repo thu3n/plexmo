@@ -263,6 +263,21 @@ try {
       updatedAt INTEGER NOT NULL
     );
 
+    --// Unified Statistics Table
+    CREATE TABLE IF NOT EXISTS media_statistics (
+      id TEXT PRIMARY KEY, -- Unified GUID
+      title TEXT NOT NULL,
+      year INTEGER,
+      poster TEXT,
+      type TEXT,
+      totalPlays INTEGER DEFAULT 0,
+      uniqueUsers INTEGER DEFAULT 0,
+      totalDuration INTEGER DEFAULT 0,
+      firstSeen TEXT NOT NULL,
+      lastSeen TEXT NOT NULL,
+      meta_json TEXT
+    );
+
     -- INDEXES FOR PERFORMANCE
     CREATE INDEX IF NOT EXISTS idx_history_dup_check ON activity_history(user, ratingKey, startTime);
     CREATE INDEX IF NOT EXISTS idx_active_dup_check ON active_sessions(user, ratingKey, startTime);
@@ -381,6 +396,11 @@ try {
   } catch (e: any) {
     console.error("[Migration] Failed to backfill userIds:", e);
   }
+
+  // Migration: Add uniqueUsers to media_statistics
+  try {
+    db.prepare("ALTER TABLE media_statistics ADD COLUMN uniqueUsers INTEGER DEFAULT 0").run();
+  } catch (e: any) { }
 
   // Migration: Create libraries table if it doesn't exist (handled by CREATE TABLE IF NOT EXISTS above, 
   // but if we were adding columns to existing, we'd do it here. 

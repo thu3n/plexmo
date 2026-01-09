@@ -157,20 +157,37 @@ export const getGroupItemsPaginated = (groupId: string, page: number = 1, pageSi
     const rows = db.prepare(query).all(...params) as any[];
 
     // 2. Merge Logic
+    // REFACTORED: Use the shared helper
+    const mergedMap = buildUnifiedItemMap(rows, group);
+
+    // 3. Convert to Array and Sort
+    // We need to deduplicate values() because we stored usage keys multiple times (imdb, tmdb, slug)
+    const uniqueItems = Array.from(new Set(mergedMap.values()));
+
+    // Sort by Added At (descending)
+    uniqueItems.sort((a, b) => (new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()));
+
+    // 4. Pagination
+    const totalCount = uniqueItems.length;
+    const items = uniqueItems.slice((page - 1) * pageSize, page * pageSize);
+
+    return { items, totalCount, group: { name: group.name, type: group.type, id: group.id } };
+};
+
+// --- Shared Unification Logic ---
+
+export const buildUnifiedItemMap = (rows: any[], contextGroup?: LibraryGroup): Map<string, MergedItem> => {
     const mergedMap = new Map<string, MergedItem>();
 
     // Fetch Server Details for URL construction
     const servers = db.prepare("SELECT id, baseUrl, token, name FROM servers").all() as any[];
-    const serverMap = new Map<string, { id: string, baseUrl: string, token: string }>();
-    servers.forEach(s => serverMap.set(s.id, { id: s.id, baseUrl: s.baseUrl, token: s.token }));
+    const serverMap = new Map<string, { id: string, baseUrl: string, token: string, name: string }>();
+    servers.forEach(s => serverMap.set(s.id, { id: s.id, baseUrl: s.baseUrl, token: s.token, name: s.name }));
 
     // Helper to generate a fuzzy slug for fallbacks
     const getSlug = (title: string, year?: number) => {
         return `${title.toLowerCase().replace(/[^a-z0-9]/g, '')}-${year || 'xxxx'}`;
     };
-
-    // Tracking which item maps to which MergedItem to handle multi-matches
-    // But since we iterate once, we just try to find an existing match.
 
     for (const row of rows) {
         let meta: any = {};
@@ -192,7 +209,16 @@ export const getGroupItemsPaginated = (groupId: string, page: number = 1, pageSi
         }
 
         // Resolve Server Name
-        const serverName = group.libraries.find(l => l.server_id === row.serverId)?.server_name || "Unknown";
+        let serverName = "Unknown";
+        if (contextGroup) {
+            serverName = contextGroup.libraries?.find(l => l.server_id === row.serverId)?.server_name || "Unknown";
+        } else {
+            // Try to resolve from row (if we joined) or just ID
+            const s = serverMap.get(row.serverId);
+            serverName = s?.name || row.serverId; // Fallback
+            // NOTE: if 'row' has serverName property (joined), usage might be better. 
+            // But for raw library_items scan, we might not have it unless joined.
+        }
 
         // Source Object
         const source: ItemSource = {
@@ -224,6 +250,7 @@ export const getGroupItemsPaginated = (groupId: string, page: number = 1, pageSi
         if (row.thumb) {
             const s = serverMap.get(row.serverId);
             if (s && s.baseUrl && s.token) {
+                // Use absolute path /api/proxy/image...
                 posterPath = `/api/proxy/image?serverId=${s.id}&thumb=${encodeURIComponent(row.thumb)}`;
             }
         }
@@ -242,14 +269,12 @@ export const getGroupItemsPaginated = (groupId: string, page: number = 1, pageSi
             if (externalIds.plex) mergedMap.set(externalIds.plex, match);
 
             // Update poster if null and we found one
-            // Preference: If existing is missing, use new one. 
-            // Or maybe preference for Resolution? 
             if (!match.posterPath && posterPath) match.posterPath = posterPath;
 
         } else {
             // New Entry
             const newItem: MergedItem = {
-                id: row.ratingKey, // Use first ID as the "primary" ID for UI keys
+                id: externalIds.imdb || externalIds.tmdb || externalIds.plex || getSlug(row.title, row.year), // Unified ID Preference
                 title: row.title,
                 year: row.year,
                 duration: meta.duration,
@@ -271,19 +296,10 @@ export const getGroupItemsPaginated = (groupId: string, page: number = 1, pageSi
             // Always register slug
             const slug = getSlug(row.title, row.year);
             mergedMap.set(slug, newItem);
+            // Also register by internal ID just in case we need to look it up by exact source later?
+            // Not for now.
         }
     }
 
-    // 3. Convert to Array and Sort
-    // We need to deduplicate values() because we stored usage keys multiple times (imdb, tmdb, slug)
-    const uniqueItems = Array.from(new Set(mergedMap.values()));
-
-    // Sort by Added At (descending)
-    uniqueItems.sort((a, b) => (new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()));
-
-    // 4. Pagination
-    const totalCount = uniqueItems.length;
-    const items = uniqueItems.slice((page - 1) * pageSize, page * pageSize);
-
-    return { items, totalCount, group: { name: group.name, type: group.type, id: group.id } };
+    return mergedMap;
 };

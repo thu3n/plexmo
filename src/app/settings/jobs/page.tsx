@@ -102,6 +102,19 @@ export default function JobsSettingsPage() {
                             onCronChange={(v: string) => handleSaveSetting("job_sync_libraries_cron", v)}
                             defaultCron="0 4 * * *"
                         />
+                        <JobRow
+                            title="Unify & Reconcile Statistics"
+                            description="Aggregates duplicate media items from different servers into unified entries for accurate statistics."
+                            type="PROCESS"
+                            color="violet"
+                            cron={settings?.["job_reconcile_stats_cron"] || "0 5 * * *"}
+                            enabled={settings?.["job_reconcile_stats_enabled"] !== "false"}
+                            activeJob={data?.jobs?.find(j => j.type === 'reconcile_stats' && ['running', 'pending'].includes(j.status))}
+                            onStart={() => handleJob('reconcile_stats')}
+                            onEnabledChange={(v: boolean) => handleSaveSetting("job_reconcile_stats_enabled", String(v))}
+                            onCronChange={(v: string) => handleSaveSetting("job_reconcile_stats_cron", v)}
+                            defaultCron="0 5 * * *"
+                        />
                     </div>
                 </div>
 

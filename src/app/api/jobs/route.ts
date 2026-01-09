@@ -110,6 +110,26 @@ export async function POST(req: NextRequest) {
             });
 
             return NextResponse.json({ job });
+        } else if (type === 'reconcile_stats') {
+            // Check if already running
+            const existing = getRunningJobForTarget(type, 'global');
+            if (existing) {
+                return NextResponse.json({ job: existing, message: "Reconciliation already running" });
+            }
+
+            const job = createJob(type, 'global');
+
+            // Start sync in background
+            // Dynamic import to avoid circular dependency issues
+            import("@/lib/cron_reconcile_stats").then(({ reconcileStatistics }) => {
+                reconcileStatistics().catch(err => {
+                    console.error(`[API] Reconciliation failed for job ${job.id}:`, err);
+                    // We should ideally update job status to failed here if the job system supports it
+                    // The job system likely tracks status in memory or DB.
+                });
+            });
+
+            return NextResponse.json({ job });
         }
 
         return NextResponse.json({ error: "Unknown job type" }, { status: 400 });

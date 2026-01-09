@@ -30,3 +30,19 @@ model AllowedUser {
   username  String?  // Optional, just for display friendliness
   createdAt DateTime @default(now())
 }
+
+model MediaStatistics {
+  id            String   @id // The Unified GUID (e.g. imdb://tt12345, plex://..., or slug)
+  title         String
+  year          Int?
+  poster        String?
+  type          String   // 'movie' or 'episode' or 'show'
+  
+  // Aggregate Metrics
+  totalPlays    Int      @default(0)
+  totalDuration Int      @default(0) // Seconds
+  firstSeen     DateTime @default(now())
+  lastSeen      DateTime @updatedAt
+  
+  meta_json     String?  // JSON for flexibility
+}
